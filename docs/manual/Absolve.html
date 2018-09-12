@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="text/html; charset=windows-1252" http-equiv="content-type">
+    <title>Absolve</title>
+  </head>
+  <body>
+    <h1 style="text-align: center;">Absolve - An Ig variable domain analysis
+      tool</h1>
+    <hr>
+    <h2>Contents:</h2>
+    <ul>
+      <li><a href="#Introduction">Introduction</a></li>
+      <li><a href="#Design">Design</a></li>
+      <li><a href="#Network%20Attached%20Storage">Network </a></li>
+      <li><a href="#Invocation">Invocation</a></li>
+      <li><a href="#--R1">--R1</a></li>
+      <li><a href="#--R2">--R2</a></li>
+      <li><a href="#--AA">--AA</a></li>
+      <li><a href="#--stats">--stats</a></li>
+      <li><a href="#--profileTiming">--profileTiming</a></li>
+      <li><a href="#--%28CH%20%7C%20VH%20%7C%20JH%20%7C%20CL%20%7C%20VL%20%7C%20JL%20%29%20dbfile">--(CH
+          | VH | JH | CL | VL | JL ) dbfile</a></li>
+      <li><a href="file:///home/guerres1/Desktop/proj/absolve/os_work/docs/manual/Absolve.html#--hmmtype">--hmmtype</a></li>
+      <li><a href="file:///home/guerres1/Desktop/proj/absolve/os_work/docs/manual/Absolve.html#--useAligner">--useAligner<br>
+        </a></li>
+      <li><a href="#--multihit">--multihit</a></li>
+      <li><a href="#--exhaustive">--exhaustive</a></li>
+      <li><a href="#--exhaustiveThreshold">--exhaustiveThreshold</a></li>
+      <li><a href="#--filterThresh">--filterThresh</a></li>
+      <li><a href="#--filterIncompletes">--filterIncompletes</a></li>
+      <li><a href="#--startseq">--startseq</a></li>
+      <li><a href="#--distrib">--distrib</a></li>
+      <li><a href="#--breakout">--breakout</a></li>
+      <li><a href="#--outdir">--outdir</a></li>
+      <li><a href="#Output%20Columns">Output Columns</a></li>
+    </ul>
+    <hr>
+    <p><br>
+    </p>
+    <h2><a id="Introduction">Introduction</a>:</h2>
+    <p>Absolve is a command line tool for processing Ig variable domain
+      sequences and generating tabular results characterizing the domains
+      (Frameworks, CDRs), germline origin, somatic hypermutation events. </p>
+    <p>Input:</p>
+    <p><br>
+      &nbsp;&nbsp;&nbsp; * Fasta files of either DNA or amino acid sequence<br>
+      &nbsp;&nbsp;&nbsp; * Fastq(.gz) files of single or paired-end reads</p>
+    <p>Performs:<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; * Detection of Ig-like sequences (HMM)<br>
+      &nbsp;&nbsp;&nbsp; * FW, CDR, Kabat numbering (HMM)<br>
+      &nbsp;&nbsp;&nbsp; * Germline Assignment and SHM (BWA or SSW aligner)<br>
+      <br>
+      Output:<br>
+      <br>
+      &nbsp;&nbsp;&nbsp; * Tab delimited files with annotations for each query
+      sequence<br>
+      &nbsp;&nbsp;&nbsp; * Optional summary statistics for the whole dataset</p>
+    <p><br>
+    </p>
+    <hr>
+    <h2><a id="Design">Design:</a></h2>
+    <p>Absolve is a command line executable written in C++ that links to
+      included copies of:</p>
+    <ul>
+      <li>libhmmr (for HMM alignment)</li>
+      <li>libbwa (for BWA alignment to germline DNA sequences</li>
+      <li>SSW SIMD aligner for germline AA (and optionally DNA) germline
+        sequences.</li>
+    </ul>
+    The main design goal was to do everything that can be done in with the query
+    sequences in one pass through the input.&nbsp; Absolve is generally CPU
+    bound with a very small memory footprint of ~20Mbytes.&nbsp; It is capable
+    of processing an NGS dataset of 10 million reads in about 2 hours with about
+    1000 cores. <br>
+    <p></p>
+    <hr>
+    <h2><a id="Network Attached Storage">Network Attached Storage</a></h2>
+    <p>When running jobs on a cluster, it is critical that some files and
+      directories be available to the cluster worker jobs via network attached
+      storage (NAS) so that resources and result files can be accessed and
+      shared by the cluster worker jobs.&nbsp;&nbsp; NAS sensitive parameters
+      are specified below as "<strong>NAS required</strong>".&nbsp;&nbsp; For
+      non-distributed/local use of absolve, you can ignore the NAS requirement.</p>
+    <hr>
+    <h2><a id="Invocation">Invocation</a></h2>
+    <p><strong>Non-distributed.</strong>&nbsp; A single-threaded/non-distributed
+      invocation, typically fine for ~1000 sequences:</p>
+    <p style="margin-left: 40px;"><span style="font-family: monospace;">$ ./<strong>absolve.bash</strong></span></p>
+    <p><strong>Distributed.&nbsp; </strong>For running large datasets (NGS
+      datasets with 100k or millions of reads) use the --distrib and --startseq
+      and --nseqs for each job to process a different part of the input
+      data.&nbsp; For example, an input dataset with 8,752 reads could be
+      distributed this way:</p>
+    <strong>&nbsp;</strong><span style="font-family: monospace;"><strong>computeNode1</strong>
+      $<strong> </strong>./absolve.bash --R1 /<strong>networkStorage</strong>/myinputfile_R1.fastq.gz
+      </span><span style="font-family: monospace;">--R2 /</span><span style="font-family: monospace;"><strong><span
+          style="font-family: monospace;">networkStorage</span></strong>/myinputfile_R2.fastq.gz
+      -VH /<strong>networkStorage</strong>/humanVH.fa --outdir /<strong>networkStorage</strong>/absolve_results<strong>
+        --distrib --startseq 1 --nseqs 3000</strong></span><br>
+    <strong>&nbsp;</strong><span style="font-family: monospace;"><strong>computeNode2</strong>
+      $<strong> </strong>./absolve.bash --R1 /<strong>networkStorage</strong>/myinputfile_R1.fastq.gz
+      </span><span style="font-family: monospace;">--R2 /</span><span style="font-family: monospace;"><strong><span
+          style="font-family: monospace;">networkStorage</span></strong>/myinputfile_R2.fastq.gz
+      -VH /<strong>networkStorage</strong>/humanVH.fa --outdir /<strong>networkStorage</strong>/absolve_results<strong>
+        --distrib --startseq 3001 --nseqs 3000</strong></span><br>
+    <strong>&nbsp;</strong><span style="font-family: monospace;"><strong>computeNode3
+        $ </strong>./absolve.bash --R1 /<strong>networkStorage</strong>/myinputfile_R1.fastq.gz
+      </span><span style="font-family: monospace;">--R2 /</span><span style="font-family: monospace;"><strong><span
+          style="font-family: monospace;">networkStorage</span></strong>/myinputfile_R2.fastq.gz
+      -VH /<strong>networkStorage</strong>/humanVH.fa --outdir /<strong>networkStorage</strong>/absolve_results<strong>
+        --distrib --startseq 6001 --nseqs 3000</strong></span><br>
+    <p>Invoking absolve with no input will give you a usage summary, but each of
+      the parameters are explained below in much greater detail.</p>
+    <hr>
+    <h2><a id="--R1">--R1</a> &lt;inputfile.(fa|fasta|fna|fastq|fastq.gz&gt;</h2>
+    <p><strong>Required field, NAS required.</strong></p>
+    <p><strong></strong>The input file maybe be either DNA or Amino acid
+      sequences in FASTA format with the suffix "<strong>.fa</strong>" or ".<strong>fasta</strong>"
+      or ".<strong>fna</strong>"</p>
+    <p>The input file might also be a fastq file with suffix ".<strong>fastq</strong>"
+      or ".<strong>fastq.gz</strong>" with either a paired end mate specified in
+      --R2, or a single fastq file with sequential mate pairs in the file (e.g.
+      the first two sequences in the fastq file are a paired-end read, the
+      second two also form a paired-end read, etc).&nbsp; </p>
+    <h2><a id="--R2">--R2</a><span style="font-weight: bold;"> </span>&lt;inputfile.(fastq|fastq.gz)&gt;</h2>
+    <p><strong>NAS required.</strong></p>
+    <p>This would be second input file for paired end reads.&nbsp; Note that
+      this is a file in fastq format.&nbsp; Paired-end reads are only supported
+      in fastq format.</p>
+    <h2><a id="--AA">--AA</a></h2>
+    <p>If your input is in fasta format but the sequences are amino acid, you
+      must invoke this flag for proper analysis.&nbsp; Absolve does autodetect
+      sequence type.&nbsp; If this <strong>flag is omitted</strong> Absolve
+      treats the sequences as DNA.</p>
+    <h2><a id="--stats">--stats</a></h2>
+    <p>If this flag is invoked, absolve will include a variety of statistics
+      with the results.&nbsp; Each statistics file is a <strong>tab-delimited</strong>,
+      two column table with <strong>no header</strong>; these are basically
+      key-value pairs, where the key is the variable of interest and the value
+      is the <strong>count</strong> of how many times that key was
+      observed.&nbsp; For example "<strong>statHCDR3.tsv</strong>" might look
+      like this, where the first column is a particular HCDR and second is
+      number of observations of that HCDR in your input sequences:</p>
+    <p style="margin-left: 40px;"><strong><span style="font-family: monospace;">AR-MFDS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          1<br>
+          ARGAGDVDWYFDY&nbsp; 1<br>
+          ARXXYN-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2</span></strong></p>
+    <p>The (current) full set of statistics files are these, for most of them,
+      the first column is the key, and the second column is the count:</p>
+    <ul>
+      <li><span style="font-family: monospace;">statHCDR3Lengths.tsv&nbsp; --
+          Heavy CDR3 lengths<br>
+        </span></li>
+      <li><span style="font-family: monospace;">statHlineage.tsv
+          &nbsp;&nbsp;&nbsp;&nbsp; -- Heavy lineages (V-allele, J-allele,
+          CDR3length)<br>
+        </span></li>
+      <li><span style="font-family: monospace;">statHMMScore.tsv
+          &nbsp;&nbsp;&nbsp;&nbsp; -- HMM scores (log-odds, rounded to
+          int).&nbsp; Useful measure of overall Ig-like sequence content in your
+          data<br>
+        </span></li>
+      <li><span style="font-family: monospace;">statJH.tsv
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          --&nbsp;Heavy J-allele usage<br>
+        </span></li>
+      <li><span style="font-family: monospace;">statJHshm.tsv
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; --&nbsp;SMH events in the
+          heavy J allele<br>
+        </span></li>
+      <li><span style="font-family: monospace;">statJL.tsv
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -- </span><span
+          style="font-family: monospace;"><span style="font-family: monospace;">Light
+            J-allele usage</span> </span></li>
+      <li><span style="font-family: monospace;">statJLshm.tsv
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -- </span><span style="font-family: monospace;">SMH
+          events in the light J allele</span></li>
+      <li><span style="font-family: monospace;">statLCDR3Lengths.tsv&nbsp; --
+          Light CDR3 lengths<br>
+        </span></li>
+      <li><span style="font-family: monospace;">statLlineage.tsv
+          &nbsp;&nbsp;&nbsp;&nbsp; -- Light Lineages (V-allele, J-allele,
+          CDR3length)<br>
+        </span></li>
+      <li><span style="font-family: monospace;">statVH.tsv
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -- Heavy
+          V-allele usage<br>
+        </span></li>
+      <li><span style="font-family: monospace;">statVHshm.tsv
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -- SHM events in heavy V
+          allele<br>
+        </span></li>
+      <li><span style="font-family: monospace;">statVL.tsv
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -- Light
+          V-allele usage<br>
+        </span></li>
+      <li><span style="font-family: monospace;">statVLshm.tsv
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -- SHM events in light V
+          allele</span></li>
+    </ul>
+    <p>The statRunStats.tsv is ALWAYS generated, even if this flag is not
+      asserted.</p>
+    <ul>
+      <li><span style="font-family: monospace;">statRunStats.tsv
+          &nbsp;&nbsp;&nbsp;&nbsp; -- Good sequences, filtered sequences, total
+          processed sequences.<br>
+        </span></li>
+    </ul>
+    <h2><a id="--profileTiming">--profileTiming</a></h2>
+    <p>This is a timing flag used for performance measurements, generally not
+      needed by users.</p>
+    <h2><a id="--(CH | VH | JH | CL | VL | JL ) dbfile">--(CH | VH | JH | CL |
+        VL | JL ) dbfile</a></h2>
+    <p><strong>NAS Required</strong>. These are the <strong>optional</strong>
+      germline database files for germline classification of query
+      sequences.&nbsp; Any combination or even none of these flags may be used
+      depending on whether the user wants germline calls of any type.&nbsp;
+      Databases are provided and described below, but they may also be any set
+      of sequences for which BWA indices are built.&nbsp; For example you may
+      have a specific set of heavy V sequences you want to classify against, you
+      might do the following:</p>
+    <p style="margin-left: 40px;"><span style="font-family: monospace;">user1@comp
+        /home/user1/myVgenes $&nbsp; <strong>ls</strong><br>
+        <strong>&nbsp;&nbsp;&nbsp;&nbsp; MyFavoriteHeavyV.fa</strong><br>
+        <strong>&nbsp;&nbsp;&nbsp;&nbsp; myQuerySeqs.fa</strong><br>
+        user1@comp /home/user1/myVgenes $&nbsp; <strong>bwa index
+          ./MyFavoriteHeavyV.fa</strong><br>
+        user1@comp /home/user1/myVgenes $ <strong>./absolve.bash&nbsp; --R1
+          ./myQuerySeqs.fa --VH ./MyFavoriteHeavyV.fa --outdir ./myresults</strong><br>
+      </span></p>
+    <p>Including any of these alignment database flags will result in alignments
+      of the query sequences being performed against these databases and the
+      results reported in their respective columns.&nbsp; The fields will be
+      empty if no flag and dbfile are provided.&nbsp; For example:</p>
+    <ul>
+      <li><span style="font-family: monospace;">VH&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          -- Best hit in the database, e.g. "IGHV4-39*01"</span></li>
+      <li><span style="font-family: monospace;">VHpos&nbsp;&nbsp;&nbsp; --
+          Offset in the query sequence where alignment begins, e.g. "1"</span></li>
+      <li><span style="font-family: monospace;">VHcigar&nbsp; -- Alignment cigar
+          against best hit, e.g. "275M2D3M1D5M23S"</span></li>
+      <li><span style="font-family: monospace;">VHshm&nbsp;&nbsp;&nbsp; --
+          Estimate of SHM events in this alignment, e.g. "12"</span></li>
+    </ul>
+    <h2><a id="--hmmtype">--hmmtype (Heavy | Light | ScFV)<br>
+      </a></h2>
+    <p>Which type of HMM to run.&nbsp; If sequences are known to be exclusively
+      heavy or light, it is faster to specify just the "<strong>Heavy</strong>"
+      or "<strong>Light</strong>" HMM.&nbsp; If the sequences are unknown, or
+      they are ScFV, use the "<strong>ScFV</strong>" HMM option.&nbsp;&nbsp; If
+      not specified, the default is "<strong>ScFV</strong>".</p>
+    <h2><a id="--useAligner">--useAligner (SWA | BWA)</a></h2>
+    <p>Which type of aligner to use.&nbsp; The default is "<strong>BWA</strong>"
+      for DNA sequences and "<strong>SWA</strong>" for amino acid sequences.</p>
+    <h2><a id="--multihit">--multihit</a> N</h2>
+    <p>For germline classification, one might also want a list of alternative
+      "next best" hits.&nbsp; If this flag is asserted with say N=5, the top
+      next best 5 hits will be reported as a comma separated list. For example,
+      the VH field would have the next best 5 hits.</p>
+    <ul>
+      <li><span style="font-family: monospace;">VH&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          -- IGHV4-39*01,IGHV4-39*02,IGHV4-39*03,IGHV2-26*01,</span><span style="font-family: monospace;">IGHV2-26*02</span></li>
+      <li><span style="font-family: monospace;">VHpos&nbsp;&nbsp;&nbsp; --
+          1,2,1,3,4</span></li>
+      <li><span style="font-family: monospace;">VHcigar&nbsp; --
+          275M2D3M1D5M23S,</span><span style="font-family: monospace;">274M2D3M1D5M23S,</span><span
+          style="font-family: monospace;">270M2D3M1D5M23S,</span><span style="font-family: monospace;">271M2D3M1D5M23S,</span><span
+          style="font-family: monospace;">272M2D3M1D5M23S</span></li>
+      <li><span style="font-family: monospace;">VHshm&nbsp;&nbsp;&nbsp; --
+          12,10,12,14,11</span></li>
+    </ul>
+    <h2><a id="--exhaustive">--exhaustive</a></h2>
+    <p>This flag is not generally used in NGS datasets, but often used on
+      complex constructs, e.g. sequences that might have multiple heavy and/or
+      light chains, in any number in any order.&nbsp; This flag will cause
+      absolve to exhaustive search a single query sequence for all possible
+      chains, and it will report one record per chain found.&nbsp; Note that
+      this can result in multiple records per Accession in the result
+      files.&nbsp; Roughly speaking, the algorithm is as follows:</p>
+    <p style="margin-left: 40px;"><span style="font-family: monospace;">while
+        (Heavy or Light domains are found){<br>
+        &nbsp;&nbsp;&nbsp; Report it.<br>
+        &nbsp;&nbsp;&nbsp; Mask it out of the query sequence so its not found
+        again.<br>
+        }</span></p>
+    <h2><a id="--exhaustiveThreshold">--exhaustiveThreshold</a>&nbsp; THRESHOLD</h2>
+    <p>When searching exhaustively for domains, the sensitivity&nbsp;can be
+      adjusted with this parameter, a threshold on the HMM score.&nbsp; The
+      default is 70.0, 55.0 will give partial Ig like sequences, 10 to 30 is
+      probably the lowest useful sensitivity.</p>
+    <h2><a id="--filterThresh">--filterThresh</a> THRESHOLD</h2>
+    <p>For normal, non-exhaustive searching, minimum HMM score
+      threshold.&nbsp;&nbsp;&nbsp; If this is set, only sequences exceeding this
+      threshold will be reported.&nbsp; If ommitted, no filtering is done.&nbsp;
+      This is a log-odds score in base 2 (bits) so 0 is even odds, positive
+      values are more likely to be real Ig Variable domain sequences and
+      negative values are less likely.&nbsp;&nbsp; 70 is a high bar, 55.0 will
+      give partial Ig like sequences, 10 to 30 is probably the lowest useful
+      discriminative sensitivity, 0 and below are almost like no filtering at
+      all.</p>
+    <h2><a id="--filterIncompletes">--filterIncompletes</a></h2>
+    <p>Flag indicating if 'incomplete' sequences should be filtered out.&nbsp;
+      Incomplete means more than 3 gaps in CDR1,FW2,CDR2,FW3.&nbsp; FW1,CDR3 and
+      FW4 are forgiven.</p>
+    <h2><a id="--startseq">--startseq</a> N</h2>
+    <p>Skip N-1 sequences and then begin processing, default 1</p>
+    <p>This is used by the dist.absolve.bash wrapper when distributing jobs on
+      the cluster so that each job works on a distinct subset of the input
+      sequences.</p>
+    <h2> <a id="--nseqs">--nseqs</a> N</h2>
+    <p></p>
+    <p>Process only N sequences after startseq.&nbsp; If omitted, the input
+      files will be read to their end. Notice that nseqs applies to 'pairs of
+      read' when R2 is specified, i.e. --nseqs 10 means read both R1 and R2 10
+      times for 10 paired-end reads.&nbsp; </p>
+    <h2><a id="--distrib">--distrib</a></h2>
+    <p>flag indicating job is part of distributed batch.&nbsp; &nbsp;&nbsp; If
+      flag set, /tmp will be used and the results will be finally
+      spooled/appended to the --outdir folder with synchronization by
+      file_lock.&nbsp; It is harmless to use this flag on non-distributed jobs,
+      but it does add extra steps.&nbsp; This flag is also useful for "pooling"
+      samples into the same result set as each run will append to, instead of
+      overwriting the results.&nbsp; The stats files will also be dealt with
+      appropriately, existing statistics are summed with each --distrib runs
+      statistics.&nbsp; This flag is used behind the scenes by
+      "dist.absolve.bash" to create worker/cluster jobs.</p>
+    <h2><a id="--breakout">--breakout</a> H|L|NONE</h2>
+    <p></p>
+    <p>For NGS datasets, the result is very large.&nbsp; Specifying H or L with
+      this flag will cause the results for each heavy or light "lineage" to be
+      saved to separate tsv files.&nbsp;&nbsp; Lineage here means
+      "Vallele-Jallele-CDR3Length", not the typical lineage concept.&nbsp; This
+      is just a way to break up the data into sensible smaller
+      sets.&nbsp;&nbsp;&nbsp; A result set would look something like:</p>
+    <p style="margin-left: 40px;"><span style="font-family: monospace;">IGHV2-5*04#IGHJ5*02#5.tsv
+        <br> IGHV4-39*01#IGHJ5*01#6.tsv<br>
+        IGHV3-33*06#*#15.tsv</span><span style="font-family: monospace;"><br>
+        etc...</span></p>
+    <p>NONE is the default, in which case all results are stored in a single
+      file: --outdir/<strong>absolve.tsv</strong></p>
+    <h2><a id="--outdir">--outdir</a> folder</h2>
+    <strong>NAS Required.</strong><br>
+    <strong>Required field.</strong><br>
+    The folder to which results will be written, either as a single file "<strong>absolve.tsv</strong>"
+    or broken out by lineage as specified by <strong>--breakout</strong>.&nbsp;
+    The folder will also contain any stat*.tsv files created by the <strong>--stat</strong>
+    flag and the <strong>statRunStats.tsv</strong> file regardless.<br>
+    <hr><br>
+    <h2><a id="Output Columns">Output Columns</a></h2>
+    <p>Absolve output files, either "absolve.tsv" or specific lineage files if
+      the breakout option is used will have the following columns:</p>
+    <p style="margin-left: 40px;"><span style="font-family: monospace;">Accession-------The
+        accession from the input file</span><br>
+      <span style="font-family: monospace;">DNA-------------The full DNA
+        sequences from the input, mated paired end reads.<br>
+        ORF-------------The highest scoring full open reading frame<br>
+        Frame-----------Reading frame start (0, 1, 2) in DNA field for ORF<br>
+        CH--------------Heavy chain constant region 1 call<br>
+        CHpos-----------Position for CH<br>
+        CHcigar---------Cigar for CH<br>
+        VH--------------Heavy V germline call<br>
+        VHpos-----------Position for VH<br>
+        VHcigar---------Cigar for VH<br>
+        VHshm-----------Somatic hypermutation estimate for VH<br>
+        JH--------------Heavy J germline call<br>
+        JHpos-----------Position for JH<br>
+        JHcigar---------Cigar for JH<br>
+        JHshm-----------Somatic hypermutation estimate for JH<br>
+        CL--------------Light chain constant region call<br>
+        CLpos-----------Position for CL<br>
+        CLcigar---------Cigar for CL</span><br>
+      <span style="font-family: monospace;">VL--------------Light V germline
+        call<br>
+        VLpos-----------Position for VL<br>
+        VLcigar---------Cigar for VL<br>
+        VLshm-----------Somatic hypermutation estimate for VL<br>
+        JL--------------Light J germline call<br>
+        JLpos-----------Position for JL<br>
+        JLcigar---------Cigar for JL<br>
+        JLshm-----------Somatic hypermutation estimate for JL<br>
+        HAA-------------Amino acid sequence for just the heavy variable region<br>
+        LAA-------------Amino acid sequence for just the light variable region<br>
+        HDNA------------DNA sequence for just the heavy variable region<br>
+        LDNA------------DNA sequence for just the light variable region<br>
+        HFW1------------Heavy Framework1 AA seq<br>
+        HCDR1-----------Heavy CDR1 AA seq<br>
+        HFW2------------Heavy Framework2 AA seq<br>
+        HCDR2-----------Heavy CDR2 AA seq<br>
+        HFW3------------Heavy Framework3 AA seq<br>
+        HCDR3-----------Heavy CDR3 AA seq<br>
+        HFW4------------Heavy Framework4 AA seq<br>
+        LFW1------------Light Framework1 AA seq<br>
+        LCDR1-----------Light CDR1 AA seq<br>
+        LFW2------------Light Framework2 AA seq<br>
+        LCDR2-----------Light CDR2 AA seq<br>
+        LFW3------------Light Framework3 AA seq<br>
+        LCDR3-----------Light CDR3 AA seq<br>
+        LFW4------------Light Framework4 AA seq<br>
+        Llineage--------Light V allele + Light J allele + CDR3length. Useful
+        preliminary grouping for later calculation of finer lineages<br>
+        Hlineage--------Light V allele + Light J allele + CDR3length. Useful
+        preliminary grouping for later calculation of finer lineages<br>
+        Kabat-----------The Kabat numbering for the sequence.<br>
+        HMMScore--------Log-odds of how Ig-like/similar to a variable domain
+        this sequence is.<br>
+        PairStrategy----What method was used to mate the paired end reads,
+        either NT18 (overlap of 18 nt perfect match), HMM1 (a single amino acid
+        match in the same HMM state), HMM2 (two or more amino acid matches in
+        the same HMM state).</span><br>
+    </p>
+    <p><br>
+    </p>
+    <hr>
+  </body>
+</html>

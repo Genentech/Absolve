@@ -1,0 +1,94 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;  Absolve configuration parameters
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+[HMM]
+ExhaustiveHMMThresh=70.0
+FilterHMMThresh=70.0
+HeavyHMMFile=absolveVH.hmm
+LightHMMFile=absolveVL.hmm
+ScFVHMMFile=absolveSCFV.hmm
+
+
+[TEMP]
+TempFolderForDistrib=/tmp
+
+[CH]
+A = 2
+B = 2
+OINS = 3
+EINS = 1
+ODEL = 3
+EDEL = 1
+CLIP3 = 5
+CLIP5 = 5
+MIN_SEED_LEN = 5
+MIN_SCORE = -3000
+
+
+; params for BWA mem aligner
+[VH]
+A = 2
+B = 2
+OINS = 3
+EINS = 1
+ODEL = 3
+EDEL = 1
+CLIP3 = 5
+CLIP5 = 5
+MIN_SEED_LEN = 12
+MIN_SCORE = -3000
+
+[JH]
+A = 2
+B = 2
+OINS = 3
+EINS = 1
+ODEL = 3
+EDEL = 1
+CLIP3 = 5
+CLIP5 = 5
+MIN_SEED_LEN = 5
+MIN_SCORE = -3000
+
+[CL]
+A = 2
+B = 2
+OINS = 3
+EINS = 1
+ODEL = 3
+EDEL = 1
+CLIP3 = 5
+CLIP5 = 5
+MIN_SEED_LEN = 5
+MIN_SCORE = -3000
+
+[VL]
+A = 2
+B = 2
+OINS = 3
+EINS = 1
+ODEL = 3
+EDEL = 1
+CLIP3 = 5
+CLIP5 = 5
+MIN_SEED_LEN = 12
+MIN_SCORE = -3000
+
+[JL]
+A = 2
+B = 2
+OINS = 3
+EINS = 1
+ODEL = 3
+EDEL = 1
+CLIP3 = 5
+CLIP5 = 5
+MIN_SEED_LEN = 5
+MIN_SCORE = -3000
+
+[pairedend]
+NT_PAIR_MIN = 18
+
