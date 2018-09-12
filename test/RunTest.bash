@@ -2,7 +2,7 @@
 
 ../absolve.bash --R1 ./simulatedseqs.fa --VH ../dbs/human/VHv.fa --outdir ./testrun
 
-if !  diff -r -q --exclude=".svn" testrun testrun.ref ; then 
+if !  diff -r -q --exclude=".svn" --exclude=".git" testrun testrun.ref ; then 
 	echo TestFailed
 	exit -1
 else
